@@ -1,0 +1,7 @@
+Todo:
+Controls
+right: next image
+up/down: scale up or down
+click: create and preview crop
+shift click: create and preview crop
+space or o: save crop
