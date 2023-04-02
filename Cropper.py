@@ -1,4 +1,5 @@
 import sys, os
+import keyboard
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.widget import Widget
@@ -38,17 +39,29 @@ class Click(Widget):
             self.saveImage(self.lastCropped)
             return 
         
-        cropSize = (-200, -200, 200, 200)
-        crop = (cropCenter[0] + cropSize[0], 
-                cropCenter[1] + cropSize[1], 
-                cropCenter[0] + cropSize[2], 
-                cropCenter[1] + cropSize[3])
-        croppedImage = (self.targetImage[0],
-                        self.targetImage[1].crop(crop))
+        cropScale = 3
+        if len(sys.argv) > 2:
+            cropScale = int(sys.argv[2])
+        
+        croppedImage = self.cropImage(self.targetImage, 
+                                 cropCenter, cropScale)
         croppedImage[1].show()
         self.lastCropped = croppedImage
 
         print(touch)
+
+    def cropImage(self, image, center, scale):
+        crop = []
+        axis = 0
+        for i in range(0, 4):
+            crop.append(center[axis] + 
+                        (50 * scale * (-1 if i <= 1 else 1)))
+            axis = 0 if axis is 1 else 1
+        return (image[0], image[1].crop(crop))
+
+
+class Keyboard(Widget):
+    pass
 
     
 class Cropper(App):
