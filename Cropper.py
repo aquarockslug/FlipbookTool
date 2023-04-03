@@ -6,6 +6,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.image import Image as ImageKivy
 from PIL import Image as ImagePIL
+from kivy.config import Config
 from kivy.core.window import Window
 
 class Images(Widget):
@@ -14,7 +15,8 @@ class Images(Widget):
         if os.path.exists(inputDir):
             for file in os.listdir(inputDir):
                 imgPath = "%s/%s" % (inputDir, file)
-                images.append((imgPath, ImagePIL.open(imgPath)))
+                image = CropperImage(imgPath)
+                images.append(image)
         else:
             print("File not found")
             return None
@@ -24,7 +26,7 @@ class Images(Widget):
 class Click(Widget):
     targetImage = None
     scale = None
-    lastCropped = None
+    lastCroppedPIL = None
     cropScale = 3
 
     def setImage(self, img, scale):
@@ -32,10 +34,10 @@ class Click(Widget):
         self.scale = 1/scale
 
     def saveImage(self):
-        if self.lastCropped == None:
+        if self.lastCroppedPIL == None:
             print("NO CROP SELECTED")
             return
-        self.lastCropped[1].save(self.lastCropped[0][2:])
+        self.lastCroppedPIL[1].save(self.lastCroppedPIL[0])
         print("CROP SAVED")
 
     def incrementScale(self, d):
@@ -53,50 +55,45 @@ class Click(Widget):
         if len(sys.argv) > 2:
             self.cropScale = int(sys.argv[2])
 
-        croppedImage = self.cropImage(self.targetImage,
-                                      cropCenter, self.cropScale)
-        croppedImage[1].show()
-        self.lastCropped = croppedImage
+        croppedImagePIL = self.targetImage.crop(cropCenter, self.cropScale)
+        croppedImagePIL.show()
+        self.lastCroppedPIL = (self.targetImage.path[2:], croppedImagePIL)
 
         print(touch)
 
-    def cropImage(self, image, center, scale):
-        crop = []
-        axis = 0
-        step = 50
-        for i in range(0, 4):
-            crop.append(center[axis] +
-                        (step * scale * (-1 if i <= 1 else 1)))
-            axis = 0 if axis is 1 else 1
-        return (image[0], image[1].crop(crop))
 
 class Cropper(App):
     imageIndex = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     images = []
     size = None
+    scale = 0.5
+    displayedWidgets = None
+    img = None
 
     def nextImage(self, i):
+            i.remove_widget(self.img.kiv)
             self.imageIndex = self.imageIndex + 1
-            self.pil = self.images[self.imageIndex]
-            self.img = ImageKivy(source=self.pil[0])
-            self.img.size = self.size
-            i.add_widget(self.img)
+            self.img = self.images[self.imageIndex]
+            self.updateSize()
+            self.click.targetImage = self.img
+            i.add_widget(self.img.kiv, 50)
+
+    def updateSize(self):
+            self.size = (self.img.pil.width*self.scale, 
+                         self.img.pil.height*self.scale)
+            self.img.kiv.size = self.size
+            Window.size = self.size
 
     def build(self):
         print(sys.argv)
         
         i = Images()
         self.images = i.getImages('uncropped')
-        self.pil = self.images[self.imageIndex]
-        scale = 0.5
-        self.size = (self.pil[1].width*scale, self.pil[1].height*scale)
-        Window.size = self.size
+        self.img = self.images[self.imageIndex]
+        self.updateSize()
 
         self.click = Click()
-        self.click.setImage(self.pil, scale)
-
-        self.img = ImageKivy(source=self.pil[0])
-        self.img.size = self.size
+        self.click.setImage(self.img, self.scale)
             
         saveButton = Button(text='Save', font_size=14,
                             pos=(0, self.size[1]-50), size=(50, 50),
@@ -124,14 +121,37 @@ class Cropper(App):
         indexDisplay = Label(text=str(self.imageIndex), pos=(self.size[0]-75, self.size[1]-75), 
                              font_size=24, bold=True)
         
-        displayedWidgets = [self.click, self.img, saveButton, scaleButtonUp, scaleButtonDown,
-                            cropScaleDisplay, indexDisplay]
+        self.displayedWidgets = [self.click, saveButton, scaleButtonUp, scaleButtonDown,
+                            cropScaleDisplay, indexDisplay, nextButton]
 
-        for widget in displayedWidgets:
+        for widget in self.displayedWidgets:
             i.add_widget(widget)
 
-        return i
+        i.add_widget(self.img.kiv, 50)
 
+        return i
+    
+class CropperImage():
+    kiv = None # display image
+    pil = None 
+    path = None
+
+    def __init__(self, path=None):
+        self.path = path
+        self.pil = ImagePIL.open(path)
+        self.kiv = ImageKivy(source=path)
+
+    def crop(self, center, scale):
+        print(center)
+        crop = []
+        axis = 0
+        step = 50
+        for i in range(0, 4):
+            crop.append(center[axis] +
+                        (step * scale * (-1 if i <= 1 else 1)))
+            axis = 0 if axis is 1 else 1
+        return self.pil.crop(crop)
 
 if __name__ == "__main__":
+    Config.set('graphics', 'resizable', False)
     Cropper().run()
