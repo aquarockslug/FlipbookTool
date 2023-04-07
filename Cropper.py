@@ -10,6 +10,14 @@ from kivy.config import Config
 from kivy.core.window import Window
 
 class Images(Widget):
+    curr = None
+    scale = None
+    lastCroppedPIL = None
+    cropScale = 3
+    images = None
+
+    imageIndex = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+
     def getImages(self, inputDir):
         images = []
         if os.path.exists(inputDir):
@@ -20,17 +28,16 @@ class Images(Widget):
         else:
             print("File not found")
             return None
+        self.images = images
         return images
 
-
-class Click(Widget):
-    targetImage = None
-    scale = None
-    lastCroppedPIL = None
-    cropScale = 3
-
+    def nextImage(self):
+        self.imageIndex = self.imageIndex + 1
+        self.curr = self.images[self.imageIndex]
+        return self.curr
+    
     def setImage(self, img, scale):
-        self.targetImage = img
+        self.curr = img
         self.scale = 1/scale
 
     def saveImage(self):
@@ -40,94 +47,98 @@ class Click(Widget):
         self.lastCroppedPIL[1].save(self.lastCroppedPIL[0])
         print("CROP SAVED")
 
-    def incrementScale(self, d):
-        self.cropScale = self.cropScale + 1
-        d.text = str(self.cropScale)
-    def deincrementScale(self, d):
-        self.cropScale = self.cropScale - 1 if self.cropScale > 1 else 1
-        d.text = str(self.cropScale)
-
-    def on_touch_down(self, touch):
-        print(touch)
+    def getCrop(self, touch):
         cropCenter = (touch.pos[0]*self.scale,
                       Window.size[1]*self.scale-touch.pos[1]*self.scale)
 
         if len(sys.argv) > 2:
             self.cropScale = int(sys.argv[2])
 
-        croppedImagePIL = self.targetImage.crop(cropCenter, self.cropScale)
-        croppedImagePIL.show()
-        self.lastCroppedPIL = (self.targetImage.path[2:], croppedImagePIL)
-
+        croppedImagePIL = self.curr.crop(cropCenter, self.cropScale)
+        self.lastCroppedPIL = (self.curr.path[2:], croppedImagePIL)
+        return croppedImagePIL
+    
+class Click(Widget):
+    i = None
+    def on_touch_down(self, touch):
         print(touch)
-
+        crop = self.i.getCrop(touch)
+        crop.show()
 
 class Cropper(App):
-    imageIndex = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    images = []
+    i = Images()
     size = None
     scale = 0.5
     displayedWidgets = None
-    img = None
 
-    def nextImage(self, i):
-            i.remove_widget(self.img.kiv)
-            self.imageIndex = self.imageIndex + 1
-            self.img = self.images[self.imageIndex]
+    def next(self, i):
+            i.remove_widget(self.i.curr.kiv)
+            i.nextImage()
             self.updateSize()
-            self.click.targetImage = self.img
-            i.add_widget(self.img.kiv, 50)
+            self.updateIndexDisplay()
+            i.add_widget(self.i.curr.kiv, 50)
 
     def updateSize(self):
-            self.size = (self.img.pil.width*self.scale, 
-                         self.img.pil.height*self.scale)
-            self.img.kiv.size = self.size
+            curr = self.i.curr
+            self.size = (curr.pil.width*self.scale, 
+                         curr.pil.height*self.scale)
+            curr.kiv.size = self.size
             Window.size = self.size
 
-    def build(self):
-        print(sys.argv)
-        
-        i = Images()
-        self.images = i.getImages('uncropped')
-        self.img = self.images[self.imageIndex]
-        self.updateSize()
+    def updateIndexDisplay(self):
+        d = self.displayedWidgets[1] # todo: find d index
+        d.text = str(self.i.imageIndex)
 
-        self.click = Click()
-        self.click.setImage(self.img, self.scale)
+    def incrementScale(self, d):
+        self.i.cropScale = self.i.cropScale + 1
+        d.text = str(self.i.cropScale)
+
+    def deincrementScale(self, d):
+        self.i.cropScale = self.i.cropScale - 1 if self.i.cropScale > 1 else 1
+        d.text = str(self.i.cropScale)
+
+    def build(self):
+        i = self.i
+        images = i.getImages('uncropped')
+        i.setImage(images[i.imageIndex], self.scale)
+        self.updateSize()
             
         saveButton = Button(text='Save', font_size=14,
                             pos=(0, self.size[1]-50), size=(50, 50),
                             color=(255, 255, 255, 1),
                             background_color=(1, 150, 1, 1),
-                            on_press=lambda s: self.click.saveImage())
+                            on_press=lambda s: self.i.saveImage())
 
         scaleButtonUp = Button(text='IN', pos=(50, self.size[1]-50),
                                size=(50, 50), color=(255, 255, 255, 1),
                                background_color=(255, 255, 255, 1),
-                               on_press=lambda s: self.click.deincrementScale(cropScaleDisplay))
+                               on_press=lambda s: self.deincrementScale(cropScaleDisplay))
 
         cropScaleDisplay = Label(text='3', pos=(75, self.size[1]-75), font_size=24, bold=True)
 
         scaleButtonDown = Button(text='OUT', pos=(150, self.size[1]-50),
                                  size=(50, 50), color=(255, 255, 255, 1),
                                  background_color=(255, 255, 255, 1),
-                                 on_press=lambda s: self.click.incrementScale(cropScaleDisplay))
+                                 on_press=lambda s: self.incrementScale(cropScaleDisplay))
         
         nextButton = Button(text='NEXT', pos=(200, self.size[1]-50),
                                  size=(50, 50), color=(255, 255, 255, 1),
                                  background_color=(255, 255, 255, 1),
-                                 on_press=lambda s: self.nextImage(i))
+                                 on_press=lambda s: self.next(i))
         
-        indexDisplay = Label(text=str(self.imageIndex), pos=(self.size[0]-75, self.size[1]-75), 
+        indexDisplay = Label(text=str(i.imageIndex), pos=(self.size[0]-75, self.size[1]-75), 
                              font_size=24, bold=True)
         
-        self.displayedWidgets = [self.click, saveButton, scaleButtonUp, scaleButtonDown,
-                            cropScaleDisplay, indexDisplay, nextButton]
+        click = Click()
+        click.i = i
+        
+        self.displayedWidgets = [click, indexDisplay, saveButton, scaleButtonUp, scaleButtonDown,
+                            cropScaleDisplay, nextButton]
 
         for widget in self.displayedWidgets:
             i.add_widget(widget)
 
-        i.add_widget(self.img.kiv, 50)
+        i.add_widget(self.i.curr.kiv, 50)
 
         return i
     
