@@ -12,7 +12,7 @@ class ImageController(Widget):
     lastCroppedPIL = None
     images = None
 
-    imageIndex = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    imageIndex = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 
     def getImages(self, inputDir):
         images = []
@@ -50,12 +50,12 @@ class Click(Widget):
 
     def on_touch_down(self, touch):
         self.selection.append(touch)
-        if len(self.selection) >= 2:
-            self.c.createCrop(self.selection)
-            self.selection = []
-            return
-        
-        print(touch)
+        if self.c.oneClick:
+            self.c.createCrop(touch.pos)
+        else:
+            if len(self.selection) >= 2:
+                self.c.createCrop(self.selection)
+                self.selection = []
 
 
 class CropperImage():
@@ -68,7 +68,7 @@ class CropperImage():
         self.pil = ImagePIL.open(path)
         self.kiv = ImageKivy(source=path)
 
-    def crop(self, center, scale):
+    def crop(self, center: list, scale: float):
         # print("center: " + center)
         crop = []
         axis = 0
