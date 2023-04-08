@@ -98,7 +98,7 @@ class Cropper(App):
                             pos=(0, self.size[1]-50), size=(50, 50),
                             color=(255, 255, 255, 1),
                             background_color=(1, 150, 1, 1),
-                            on_press=lambda s: self.ic.saveImage(self.crop, self.ic.curr.path))
+                            on_press=lambda s: self.ic.saveImage(self.crop))
 
         nextButton = Button(text='NEXT', pos=(50, self.size[1]-50),
                                  size=(50, 50), color=(255, 255, 255, 1),
