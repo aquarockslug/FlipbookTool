@@ -59,7 +59,7 @@ class Cropper(App):
         center = [(x1 + x2)/2, (y1 + y2)/2]
         angle = math.degrees(math.atan(a / b))
 
-        crop = self.ic.curr.crop(center, distance/100+self.margin)
+        crop = self.ic.curr.crop(center, distance/100*self.margin)
         self.crop = crop.rotate(angle if x1 < x2 else -angle)
         self.crop.show()
 
@@ -96,7 +96,7 @@ class Cropper(App):
                             pos=(0, self.size[1]-50), size=(50, 50),
                             color=(255, 255, 255, 1),
                             background_color=(1, 150, 1, 1),
-                            on_press=lambda s: self.ic.saveImage())
+                            on_press=lambda s: self.ic.saveImage(self.ic.curr))
 
         nextButton = Button(text='NEXT', pos=(50, self.size[1]-50),
                                  size=(50, 50), color=(255, 255, 255, 1),
@@ -119,7 +119,6 @@ class Cropper(App):
                                  self.incrementScale(cropScaleDisplay))
 
         
-
         indexDisplay = Label(text=str(ic.imageIndex), pos=(self.size[0]-75, self.size[1]-75),
                              font_size=24, bold=True)
 
