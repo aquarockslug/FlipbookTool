@@ -14,6 +14,8 @@ class ImageController(Widget):
 
     imageIndex = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 
+    pageIndex = 0
+
     def getImages(self, inputDir):
         images = []
         if os.path.exists(inputDir):
@@ -28,6 +30,7 @@ class ImageController(Widget):
         return images
 
     def nextImage(self):
+        self.pageIndex = 0
         self.imageIndex = self.imageIndex + 1
         self.curr = self.images[self.imageIndex]
         return self.curr
@@ -40,7 +43,8 @@ class ImageController(Widget):
         if image is None:
             print("NO CROP SELECTED")
             return
-        image.save(self.curr.path[2:])
+        self.pageIndex += 1
+        image.save(self.curr.path[2:] + str(self.pageIndex) + ".png")
         print("CROP SAVED")
     
 class Click(Widget):
