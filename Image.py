@@ -36,11 +36,11 @@ class ImageController(Widget):
         self.curr = img
         self.scale = 1/scale
 
-    def saveImage(self, image):
+    def saveImage(self, image, path):
         if image is None:
             print("NO CROP SELECTED")
             return
-        image.pil.save(image.path[2:])
+        image.save(path[2:])
         print("CROP SAVED")
     
 class Click(Widget):
